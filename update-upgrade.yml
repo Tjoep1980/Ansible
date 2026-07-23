@@ -21,7 +21,7 @@
 
     - name: Pakketten upgraden (apt upgrade)
       ansible.builtin.apt:
-        upgrade: dist          # 'dist' = full-upgrade; gebruik 'yes' voor gewone upgrade
+        upgrade: yes          # 'dist' = full-upgrade; gebruik 'yes' voor gewone upgrade
         lock_timeout: 300
       register: upgrade_result
 
