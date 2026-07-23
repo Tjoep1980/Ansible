@@ -5,32 +5,28 @@
 plugin: community.proxmox.proxmox
 
 # --- Verbinding met de Proxmox-API ---
-url: "https://192.168.1.2:8006"     # <-- pas aan naar je Proxmox-host/cluster
-user: "ansible@pam"                  # gebruiker waar het API-token bij hoort
+url: "https://192.168.1.2:8006"      # <-- jouw Proxmox-host/cluster
+user: "ansible@pve"                  # gebruiker waar het API-token bij hoort
 token_id: "ansible-inventory"        # naam van je API-token (zonder user-prefix)
 token_secret: "{{ lookup('ansible.builtin.env', 'PROXMOX_TOKEN_SECRET') }}"
 validate_certs: false                # self-signed cert in een homelab -> uit
 
 # --- Wat ophalen ---
-want_facts: true                     # nodig voor proxmox_tags_parsed (lijst met tags)
+want_facts: true                     # nodig voor tags en IP-gegevens
 exclude_nodes: true                  # de Proxmox-hosts zelf NIET in de inventory
 
-# --- Alleen VM's MET de tag 'ansible' opnemen ---
-# Verander 'ansible' in de tag die jij in Proxmox gebruikt.
-# Een host komt alleen in de inventory als deze expressie waar is.
+# --- Alleen VM's MET de tag 'patch' opnemen ---
 filters:
   - "'patch' in (proxmox_tags_parsed | default([]))"
 
+# --- Altijd op IP-adres verbinden i.p.v. VM-naam ---
+# Pakt het IP uit de Proxmox-config: ipconfig0 (QEMU/cloud-init) of net0 (LXC),
+# en stript het subnet (/24). Geen extra python-modules nodig.
+compose:
+  ansible_host: "(proxmox_ipconfig0.ip | default(proxmox_net0.ip)).split('/') | first"
+
 # --- Automatisch een groep per tag aanmaken (optioneel, handig) ---
-# Een VM met tag 'web' komt zo ook in de groep 'tag_web', enz.
 keyed_groups:
   - key: proxmox_tags_parsed
     separator: "_"
     prefix: tag
-
-# --- Verbinden op IP i.p.v. VM-naam (optioneel) ---
-# Standaard verbindt Ansible op de VM-naam. Resolven je VM-namen niet via DNS,
-# haal dan onderstaande regels uit commentaar. Werkt voor LXC en voor QEMU met
-# de guest-agent. Vereist de ansible.utils-collection + python 'netaddr'.
-# compose:
-#   ansible_host: "proxmox_net0.ip | default(proxmox_ipconfig0.ip) | ansible.utils.ipaddr('address')"
