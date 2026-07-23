@@ -1,0 +1,44 @@
+---
+# Installeert en activeert de qemu-guest-agent op je VM's.
+# Draai dit tegen je STATISCHE inventory (op IP-adres), niet tegen de
+# Proxmox-inventory - die kan de hosts immers nog niet bereiken.
+#
+# LET OP: het pakket installeren is maar de helft. Voor Proxmox de agent
+# echt kan gebruiken moet je per VM ook:
+#   1. In Proxmox: VM -> Options -> QEMU Guest Agent -> Enabled aanzetten.
+#   2. De VM volledig stoppen en starten (een reboot van binnenuit voegt
+#      de virtio-channel NIET toe; dat gebeurt alleen bij een koude start).
+- name: qemu-guest-agent installeren en activeren
+  hosts: all
+  become: true
+  become_user: root
+  gather_facts: false
+
+  tasks:
+    - name: Wacht tot apt/dpkg-lock vrij is
+      ansible.builtin.shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
+      changed_when: false
+
+    - name: qemu-guest-agent installeren
+      ansible.builtin.apt:
+        name: qemu-guest-agent
+        update_cache: true
+        state: present
+        lock_timeout: 300
+
+    - name: qemu-guest-agent service enablen en starten
+      ansible.builtin.systemd_service:
+        name: qemu-guest-agent
+        enabled: true
+        state: started
+      register: aga
+      failed_when: false
+
+    - name: Status melden
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'qemu-guest-agent draait.' if (aga is not failed)
+             else 'Pakket geinstalleerd, maar de service start nog niet. Zet de '
+                  'QEMU Guest Agent aan in Proxmox (VM -> Options) en doe een '
+                  'koude herstart van de VM.' }}
