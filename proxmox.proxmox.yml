@@ -20,10 +20,17 @@ filters:
   - "'patch' in (proxmox_tags_parsed | default([]))"
 
 # --- Altijd op IP-adres verbinden i.p.v. VM-naam ---
-# Pakt het IP uit de Proxmox-config: ipconfig0 (QEMU/cloud-init) of net0 (LXC),
-# en stript het subnet (/24). Geen extra python-modules nodig.
+# Pakt het eerste IPv4-adres van de qemu-guest-agent (exclusief loopback)
+# en stript het subnet (/24). Vereist dat de guest-agent draait.
 compose:
-  ansible_host: "(proxmox_ipconfig0.ip | default(proxmox_net0.ip)).split('/') | first"
+  ansible_host: >-
+    proxmox_agent_interfaces
+    | rejectattr('name', 'equalto', 'lo')
+    | map(attribute='ip-addresses') | flatten
+    | map('regex_replace', '/.*$', '')
+    | select('match', '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
+    | reject('match', '^127\.')
+    | first
 
 # --- Automatisch een groep per tag aanmaken (optioneel, handig) ---
 keyed_groups:
