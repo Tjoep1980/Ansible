@@ -1,0 +1,42 @@
+---
+# Update en upgrade van alle apt-hosts.
+# Draait als root via become; wacht netjes tot de apt/dpkg-lock vrij is
+# zodat unattended-upgrades geen roet in het eten gooit.
+- name: apt update en upgrade
+  hosts: all
+  become: true
+  become_user: root
+  gather_facts: false
+
+  tasks:
+    - name: Wacht tot apt/dpkg-lock vrij is
+      ansible.builtin.shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
+      changed_when: false
+
+    - name: Apt cache bijwerken (apt update)
+      ansible.builtin.apt:
+        update_cache: true
+        lock_timeout: 300
+
+    - name: Pakketten upgraden (apt upgrade)
+      ansible.builtin.apt:
+        upgrade: dist          # 'dist' = full-upgrade; gebruik 'yes' voor gewone upgrade
+        lock_timeout: 300
+      register: upgrade_result
+
+    - name: Overbodige pakketten opruimen (autoremove)
+      ansible.builtin.apt:
+        autoremove: true
+        autoclean: true
+
+    - name: Controleer of een reboot nodig is
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Meld of een herstart nodig is
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Reboot vereist na upgrade.' if reboot_required.stat.exists
+             else 'Geen reboot nodig.' }}
