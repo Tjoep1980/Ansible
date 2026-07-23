@@ -1,0 +1,5 @@
+---
+# Zorgt dat Semaphore de Proxmox-collectie installeert bij het draaien.
+# Zet dit bestand in de root van je repo (of in collections/requirements.yml).
+collections:
+  - name: community.proxmox
