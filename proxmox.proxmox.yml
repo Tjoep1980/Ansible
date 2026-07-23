@@ -6,7 +6,7 @@ plugin: community.proxmox.proxmox
 
 # --- Verbinding met de Proxmox-API ---
 url: "https://192.168.1.2:8006"      # <-- jouw Proxmox-host/cluster
-user: "ansible@pve"                  # gebruiker waar het API-token bij hoort
+user: "ansible@pam"                  # gebruiker waar het API-token bij hoort
 token_id: "ansible-inventory"        # naam van je API-token (zonder user-prefix)
 token_secret: "{{ lookup('ansible.builtin.env', 'PROXMOX_TOKEN_SECRET') }}"
 validate_certs: false                # self-signed cert in een homelab -> uit
