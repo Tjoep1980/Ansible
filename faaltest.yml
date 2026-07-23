@@ -1,6 +1,0 @@
-- hosts: localhost
-  connection: local
-  gather_facts: false
-  tasks:
-    - name: expres falen
-      ansible.builtin.command: /bin/false
